@@ -108,11 +108,4 @@ Restore to a specific directory:
 - The scripts assume the trashbox directory is `.sh-trashbox` in the current working directory.
 - Files and directories with the same name may lead to ambiguity during restoration.
 
-## Author
-
-This project was created as a utility for managing file deletions safely.
-
----
-
-Feel free to modify and enhance these scripts as per your requirements!
 
