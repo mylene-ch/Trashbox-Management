@@ -98,27 +98,144 @@ elif [ "$1" == "-d" ]; then
 
   shift 2 # Skip the flag and directory arguments
 
-  # Similar logic as above to find and restore files to the target directory
+  while [ $# -gt 0 ]; do
+    file_to_restore=$1
+    latest_line=""
+    latest_time=0
 
-# Default restoration mode (restore to the current directory)
+    for ((i=1; i<=total_line; i++)); do
+      line=$(sed -n "${i}p" "$index_file")
+      id=$(echo "$line" | cut -d ':' -f 1)
+      dir_name=$(echo "$line" | cut -d ':' -f 3)
+      file_name=$(echo "$line" | cut -d ':' -f 4)
+      del_time=$(echo "$line" | cut -d ':' -f 5)
+
+      if [[ "$file_name" == "$file_to_restore" ]]; then
+        if (( del_time > latest_time )); then
+          latest_time=$del_time
+          latest_line="$id:$dir_name:$file_name:$del_time"
+        fi
+      fi
+    done
+
+    if [ -n "$latest_line" ]; then
+        id=$(echo "$latest_line" | cut -d ':' -f 1)
+        file_name=$(echo "$latest_line" | cut -d ':' -f 3)
+        mv "$trashbox_dir/$id" "$dir_to_put/$file_name"
+        echo "File '$file_name' has been restored to '$dir_to_put'."
+
+        if [[ $id -eq 1 ]]
+        then
+            echo " " >> "tmp_file.txt"
+            tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+
+        elif [ $id -eq `expr $num_in_ID - 1` ]
+        then
+            head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+            echo " " >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+        else
+            head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+            echo " " >> "tmp_file.txt"
+            tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+        fi
+    else
+      echo "File '$file_to_restore' not found in the trashbox."
+    fi
+
+    shift
+  done
+
 else
-  # Logic to restore items to the current directory
-  # Follows the same approach as the `-r` and `-d` modes
+  # Default behavior (restore to the current directory)
+  while [ $# -gt 0 ]; do
+    file_to_restore=$1
+    latest_line=""
+    latest_time=0
+
+    for ((i=1; i<=total_line; i++)); do
+      line=$(sed -n "${i}p" "$index_file")
+      id=$(echo "$line" | cut -d ':' -f 1)
+      dir_name=$(echo "$line" | cut -d ':' -f 3)
+      file_name=$(echo "$line" | cut -d ':' -f 4)
+      del_time=$(echo "$line" | cut -d ':' -f 5)
+
+      if [[ "$file_name" == "$file_to_restore" ]]; then
+        if (( del_time > latest_time )); then
+          latest_time=$del_time
+          latest_line="$id:$dir_name:$file_name:$del_time"
+        fi
+      fi
+    done
+
+      if [ -n "$latest_line" ]; then
+        id=$(echo "$latest_line" | cut -d ':' -f 1)
+        file_name=$(echo "$latest_line" | cut -d ':' -f 3)
+        mv "$trashbox_dir/$id" "./$file_name"
+        echo "File '$file_name' has been restored to the current directory."
+
+        if [[ $id -eq 1 ]]
+        then
+            echo " " >> "tmp_file.txt"
+            tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+
+        elif [ $id -eq `expr $num_in_ID - 1` ]
+        then
+            head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+            echo " " >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+        else
+            head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+            echo " " >> "tmp_file.txt"
+            tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+            mv "tmp_file.txt" ".sh-trashbox/INDEX"
+      fi
+    else
+      echo "File '$file_to_restore' not found in the trashbox."
+    fi
+
+    shift
+  done
 fi
 
 # Final check for leftover directories in the trashbox
 # Cleans up the INDEX file if a restored directory remains listed
-for ((i=1; i<=total_line; i++)); do
-  line=$(head -n $i .sh-trashbox/INDEX | tail -n 1)
-  words_in_line=$(echo $line | wc -w)
-  if [ $words_in_line -gt 0 ]; then
-    id=$(echo $line | cut -d ':' -f 1)
-    original_dir=$(echo $line | cut -d ':' -f 3)
-    file_name=$(echo $line | cut -d ':' -f 4)
-    if [ -d "$original_dir/$file_name" ]; then
-      # Logic to clean up INDEX
+for ((i=1; i<=total_line; i++))
+do
+    line=$(head -n $i .sh-trashbox/INDEX | tail -n 1)
+    
+    words_in_line=$(echo $line | wc -w)
+    if [ $words_in_line -gt 0 ];then
+        #echo "line has : $line"
+        id=$(echo $line | cut -d ':' -f 1)
+        type=$(echo $line | cut -d ':' -f 2)
+        original_dir=$(echo $line | cut -d ':' -f 3)
+        file_name=$(echo $line | cut -d ':' -f 4)
+        #echo "id = $id"
+        if [ -d "$original_dir/$file_name" ]; then
+            if [[ $id -eq 1 ]]
+            then
+                echo " " >> "tmp_file.txt"
+                tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+                mv "tmp_file.txt" ".sh-trashbox/INDEX"
+
+            elif [ $id -eq $(($num_in_ID - 1)) ]
+            then
+                head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+                echo " " >> "tmp_file.txt"
+                mv "tmp_file.txt" ".sh-trashbox/INDEX"
+            else
+                head -n $(($id - 1)) ".sh-trashbox/INDEX" > "tmp_file.txt"
+                echo " " >> "tmp_file.txt"
+                tail -n +$(($id + 1)) ".sh-trashbox/INDEX" >> "tmp_file.txt"
+                mv "tmp_file.txt" ".sh-trashbox/INDEX"
+            fi
+        fi
     fi
-  fi
+    
 done
 
 # Reinitialize the trashbox if the INDEX is empty
